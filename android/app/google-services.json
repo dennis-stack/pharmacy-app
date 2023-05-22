@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "179864448575",
+    "project_id": "drugstore-app-7bdbb",
+    "storage_bucket": "drugstore-app-7bdbb.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:179864448575:android:63aca709fd76310cdfd28a",
+        "android_client_info": {
+          "package_name": "com.example.pharmacyApp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "179864448575-30hnfg6m1eschidnf7t1h3fmat76sio9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCAydvGJSUFb8Jt57qcBT3sAcyZ95kuZU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "179864448575-30hnfg6m1eschidnf7t1h3fmat76sio9.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "179864448575-q34mvpu8jmn76pl0ri4mf3s727i40j08.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.medicineApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
