@@ -65,6 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       label: label,
       icon: SvgPicture.asset(
         iconPath,
+        // ignore: deprecated_member_use
         color: iconColor,
       ),
     );

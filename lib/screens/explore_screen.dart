@@ -3,8 +3,6 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:pharmacyApp/common_widgets/app_text.dart';
 import 'package:pharmacyApp/models/category_item.dart';
 import 'package:pharmacyApp/widgets/category_item_card_widget.dart';
-import 'package:pharmacyApp/widgets/search_bar_widget.dart';
-
 import 'category_items_screen.dart';
 
 List<Color> gridColors = [

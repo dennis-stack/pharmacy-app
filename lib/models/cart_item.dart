@@ -24,4 +24,9 @@ class CartItem {
       this.totalPrice = this.quantity * this.medicineItem.price;
     }
   }
+
+  @override
+  String toString() {
+    return 'CartItem(medicineItem: $medicineItem, quantity: $quantity, totalPrice: $totalPrice)';
+  }
 }

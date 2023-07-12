@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:pharmacyApp/connection/connection.dart';
 import 'package:pharmacyApp/common_widgets/app_button.dart';
 import 'package:pharmacyApp/common_widgets/register_link.dart';
+import 'package:pharmacyApp/common_widgets/toast_message.dart';
 import 'package:pharmacyApp/screens/register_screen.dart';
 import 'package:pharmacyApp/screens/dashboard/dashboard_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
+  final String email;
+
+  const LoginPage({Key? key, required this.email}) : super(key: key);
 
   @override
   _LoginPageState createState() => _LoginPageState();
@@ -16,7 +22,6 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _showError = false;
   bool _noUserError = false;
   bool _showWrongPasswordError = false;
@@ -26,22 +31,10 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void initState() {
-    _emailController = TextEditingController();
+    _emailController = TextEditingController(text: widget.email);
     _passwordController = TextEditingController();
-    _loadSavedCredentials();
+    loadSavedCredentials();
     super.initState();
-  }
-
-  void _loadSavedCredentials() async {
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('email');
-    final password = prefs.getString('password');
-    if (email != null) {
-      _emailController.text = email;
-    }
-    if (password != null) {
-      _passwordController.text = password;
-    }
   }
 
   @override
@@ -49,6 +42,14 @@ class _LoginPageState extends State<LoginPage> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void loadSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('email');
+    if (email != null) {
+      _emailController.text = email;
+    }
   }
 
   @override
@@ -76,37 +77,46 @@ class _LoginPageState extends State<LoginPage> {
                       SizedBox(
                         height: 5,
                       ),
-                      _showError
-                          ? Text('Please fill all fields',
-                              style: TextStyle(color: Colors.red))
-                          : SizedBox(),
-                      SizedBox(
-                        height: 10,
-                      ),
-                      _noUserError
-                          ? Text(
-                              'User does not exist',
-                              style: TextStyle(color: Colors.red),
-                            )
-                          : SizedBox(),
-                      SizedBox(
-                        height: 10,
-                      ),
-                      _showWrongPasswordError
-                          ? Text(
-                              'Wrong password',
-                              style: TextStyle(color: Colors.red),
-                            )
-                          : SizedBox(),
-                      SizedBox(
-                        height: 10,
-                      ),
-                      _showEmailFormatError
-                          ? Text(
-                              'Please enter a valid email address.',
-                              style: TextStyle(color: Colors.red),
-                            )
-                          : SizedBox(),
+                      if (_showError)
+                        SizedBox(
+                          height: 10,
+                          child: ToastMessage(
+                            message: 'Please fill all fields',
+                            backgroundColor: Colors.red,
+                          ),
+                        )
+                      else
+                        SizedBox(height: 0),
+                      if (_noUserError)
+                        SizedBox(
+                          height: 10,
+                          child: ToastMessage(
+                            message: 'User does not exist',
+                            backgroundColor: Colors.red,
+                          ),
+                        )
+                      else
+                        SizedBox(height: 0),
+                      if (_showWrongPasswordError)
+                        SizedBox(
+                          height: 10,
+                          child: ToastMessage(
+                            message: 'Wrong Password',
+                            backgroundColor: Colors.red,
+                          ),
+                        )
+                      else
+                        SizedBox(height: 0),
+                      if (_showEmailFormatError)
+                        SizedBox(
+                          height: 10,
+                          child: ToastMessage(
+                            message: 'Please enter a valid email address',
+                            backgroundColor: Colors.red,
+                          ),
+                        )
+                      else
+                        SizedBox(height: 0),
                       SizedBox(
                         height: 10,
                       ),
@@ -121,16 +131,18 @@ class _LoginPageState extends State<LoginPage> {
                               _showWrongPasswordError = false;
                             });
                           } else {
-                            onLoginClicked(context);
+                            login();
                           }
                         },
                       ),
                       RegisterLink(
                         onTap: () {
                           Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => RegistrationPage()));
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RegistrationPage(),
+                            ),
+                          );
                         },
                       ),
                     ],
@@ -182,74 +194,75 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void onLoginClicked(BuildContext context) async {
-    try {
-      final UserCredential userCredential =
-          await _auth.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      if (userCredential.user != null) {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(
-          builder: (BuildContext context) => DashboardScreen(),
-        ));
-      }
-      final prefs = await SharedPreferences.getInstance();
-      prefs.setString('email', _emailController.text.trim());
-      prefs.setString('password', _passwordController.text.trim());
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          bool loginSuccessful = true;
-          return AlertDialog(
-            // ignore: dead_code
-            title: Text(loginSuccessful ? "Login Successful" : "Login Failed"),
-            content: Text(loginSuccessful
-                ? "You have successfully logged in!"
-                // ignore: dead_code
-                : "Sorry, login failed. Please try again."),
-            actions: <Widget>[
-              TextButton(
-                child: Text("OK"),
-                onPressed: () {
-                  Navigator.of(context).pushReplacement(MaterialPageRoute(
-                    builder: (BuildContext context) {
-                      return DashboardScreen();
-                    },
-                  ));
-                },
-              ),
-            ],
-          );
-        },
-      );
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        setState(() {
-          _noUserError = true;
-          _showWrongPasswordError = false;
-          _showError = false;
-        });
-      } else if (e.code == 'wrong-password') {
-        setState(() {
-          _showWrongPasswordError = true;
-          _noUserError = false;
-          _showError = false;
-        });
-      } else if (!_emailRegex.hasMatch(_emailController.text)) {
-        setState(() {
-          _showError = false;
-          _showWrongPasswordError = false;
-          _noUserError = false;
-          _showError = false;
-          _showEmailFormatError = true;
-        });
+  void login() async {
+    final url = API.login;
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text.trim(),
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final loginSuccessful = data['success'] ?? false;
+
+      if (loginSuccessful) {
+        SharedPreferences preferences = await SharedPreferences.getInstance();
+        preferences.setString('email', _emailController.text.trim());
+        preferences.setString('password', _passwordController.text.trim());
+
+        final user = data['user'];
+        preferences.setString('firstName', user['firstName']);
+        preferences.setString('lastName', user['lastName']);
+        preferences.setString('phoneNo', user['phoneNo']);
+
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (BuildContext context) => DashboardScreen(),
+          ),
+        );
+
+        Fluttertoast.showToast(
+          msg: 'Login successful!',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
       } else {
         setState(() {
+          _noUserError = data['error'] == 'user-not-found';
+          _showWrongPasswordError = data['error'] == 'wrong-password';
+          _showEmailFormatError = !_emailRegex.hasMatch(_emailController.text);
           _showError = false;
-          _noUserError = false;
-          _showWrongPasswordError = false;
         });
+      }
+    } else {
+      // Handle error
+      print('Login request failed with status: ${response.statusCode}');
+      if (response.statusCode == 503) {
+        Fluttertoast.showToast(
+          msg: "Server is currently offline",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.orange,
+          textColor: Colors.white,
+        );
+      } else {
+        Fluttertoast.showToast(
+          msg: "Failed to login. Please try again.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
       }
     }
   }

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:pharmacyApp/providers/cart_provider.dart';
 import 'package:pharmacyApp/screens/cart/checkout_bottom_sheet.dart';
 import 'package:provider/provider.dart';
+import 'package:pharmacyApp/widgets/map_search_bar.dart';
 
 class MapScreen extends StatefulWidget {
   static const routeName = '/map';
+
   @override
   _MapScreenState createState() => _MapScreenState();
 }
@@ -16,8 +20,8 @@ class _MapScreenState extends State<MapScreen> {
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
 
-  // Default location is Egerton Njoro
-  LatLng _currentLocation = LatLng(-0.312409, 35.749329);
+  // Default location is Nairobi
+  LatLng _currentLocation = LatLng(-1.29028, 36.82389);
   GoogleMapController? _mapController;
 
   String _deliveryAddress = "";
@@ -69,7 +73,7 @@ class _MapScreenState extends State<MapScreen> {
         _currentLocation.longitude,
       );
       String address =
-          "${placemarks.first.name}, ${placemarks.first.thoroughfare}, ${placemarks.first.subLocality}, ${placemarks.first.locality}, ${placemarks.first.postalCode}, ${placemarks.first.country}";
+          "${placemarks.first.name ?? ''}, ${placemarks.first.thoroughfare ?? ''}, ${placemarks.first.subLocality ?? ''}, ${placemarks.first.locality ?? ''}, ${placemarks.first.postalCode ?? ''}, ${placemarks.first.country ?? ''}";
       setState(() {
         _deliveryAddress = address;
       });
@@ -111,44 +115,67 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return PreferredSize(
+      preferredSize: Size.fromHeight(kToolbarHeight),
+      child: CustomSearchBar(
+        searchController: _searchController,
+        searchFocusNode: _searchFocusNode,
+        onSearchSubmitted: (value) {
+          _searchAddress(value);
+          _searchController.clear();
+          _searchFocusNode.unfocus();
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: TextField(
-          controller: _searchController,
-          focusNode: _searchFocusNode,
-          decoration: InputDecoration(
-            hintText: 'Search',
-            border: InputBorder.none,
-          ),
-          onSubmitted: (value) {
-            _searchAddress(value);
-            _searchController.clear();
-            _searchFocusNode.unfocus();
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search),
-            onPressed: () {
-              _searchAddress(_searchController.text);
-              _searchController.clear();
-              _searchFocusNode.unfocus();
-            },
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(context),
       body: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _currentLocation,
-              zoom: 14.0,
+          Container(
+            padding: EdgeInsets.only(bottom: 70.0),
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: _currentLocation,
+                zoom: 14.0,
+              ),
+              onMapCreated: _onMapCreated,
+              markers: _markers,
+              myLocationEnabled: true,
+              gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>[
+                Factory<OneSequenceGestureRecognizer>(
+                  () => EagerGestureRecognizer(),
+                ),
+              ].toSet(),
+              onTap: (LatLng latLng) async {
+                setState(() {
+                  _markers.clear();
+                  _markers.add(
+                    Marker(
+                      markerId: MarkerId('search-location'),
+                      position: latLng,
+                      icon: BitmapDescriptor.defaultMarker,
+                    ),
+                  );
+                  _currentLocation = latLng;
+                });
+
+                // Update delivery address using reverse geocoding
+                List<Placemark> placemarks = await placemarkFromCoordinates(
+                  _currentLocation.latitude,
+                  _currentLocation.longitude,
+                );
+                String address =
+                    "${placemarks.first.name ?? ''}, ${placemarks.first.thoroughfare ?? ''}, ${placemarks.first.subLocality ?? ''}, ${placemarks.first.locality ?? ''}, ${placemarks.first.postalCode ?? ''}, ${placemarks.first.country ?? ''}";
+                setState(() {
+                  _deliveryAddress = address;
+                });
+              },
             ),
-            onMapCreated: _onMapCreated,
-            markers: _markers,
-            myLocationEnabled: true,
           ),
           Positioned(
             bottom: 16.0,

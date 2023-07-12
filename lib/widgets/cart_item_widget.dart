@@ -115,7 +115,10 @@ class _CartItemWidgetState extends State<CartItemWidget> {
   Widget imageWidget() {
     return Container(
       width: 100,
-      child: Image.asset(widget.item.productImage),
+      child: Image.network(
+        widget.item.productImage,
+        fit: BoxFit.cover,
+      ),
     );
   }
 

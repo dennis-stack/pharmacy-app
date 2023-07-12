@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:pharmacyApp/screens/welcome_screen.dart';
 import 'package:flutter_svg/flutter_svg.dart';

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:pharmacyApp/common_widgets/app_text.dart';
 import 'package:pharmacyApp/models/medicine_item.dart';
 import 'package:pharmacyApp/widgets/medicine_item_card_widget.dart';
-
 import 'product_details/product_details_screen.dart';
 
 class ProductListScreen extends StatelessWidget {

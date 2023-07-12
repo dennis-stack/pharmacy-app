@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:pharmacyApp/common_widgets/app_text.dart';
-import 'package:pharmacyApp/models/medicine_item.dart';
 import 'package:pharmacyApp/providers/cart_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pharmacyApp/screens/map_screen.dart';
@@ -105,7 +104,8 @@ class _CartScreenState extends State<CartScreen> {
                               ElevatedButton(
                                 onPressed: cartProvider.clearCart,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).errorColor,
+                                  backgroundColor:
+                                      Theme.of(context).colorScheme.error,
                                 ),
                                 child: Text('Clear Cart'),
                               ),

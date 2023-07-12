@@ -3,11 +3,11 @@ import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:pharmacyApp/mpesa/payment.dart';
+import 'package:pharmacyApp/connection/connection.dart';
 import 'package:pharmacyApp/providers/cart_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class CheckoutBottomSheet extends StatelessWidget {
   const CheckoutBottomSheet({
@@ -105,8 +105,10 @@ class CheckoutBottomSheet extends StatelessWidget {
                       }
                       final List<Placemark> placemarks = snapshot.data!;
                       final Placemark placemark = placemarks.first;
+                      final address =
+                          '${placemark.street}, ${placemark.subLocality}, ${placemark.locality}, ${placemark.country}';
                       return Text(
-                        '${placemark.locality}, ${placemark.administrativeArea}, ${placemark.country}',
+                        address,
                         style: TextStyle(
                           fontSize: 16,
                         ),
@@ -177,42 +179,70 @@ class CheckoutBottomSheet extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               try {
-                // Get the current user's phone number from Firebase
-                final user = FirebaseAuth.instance.currentUser;
-                final userDoc = await FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(user?.uid)
-                    .get();
-                final String phoneNumber = userDoc['phoneNo'];
+                // Get the current user's details from shared_preferences
+                final prefs = await SharedPreferences.getInstance();
+                final firstName = prefs.getString('firstName');
+                final lastName = prefs.getString('lastName');
+                final email = prefs.getString('email');
+                final phoneNumber = prefs.getString('phoneNo');
 
-                // Call the mpesa payment method
-                await PaymentMpesa().makePayment(phoneNumber);
-
-                // Get the CartProvider using the CartProviderWidget
-                final cartProvider =
-                    Provider.of<CartProvider>(context, listen: false);
-
-                // Save the order to Firebase
-                final ordersCollection =
-                    FirebaseFirestore.instance.collection('orders');
-                await ordersCollection.add({
-                  'userId': user?.uid,
-                  'firstName': user?.displayName?.split(' ')[0] ?? '',
-                  
-                  'lastName': user?.displayName?.split(' ')[1] ?? '',
-                  'email': user?.email ?? '',
-                  'phoneNumber': phoneNumber,
-                  'deliveryCoordinates': GeoPoint(latitude, longitude),
+                // Prepare the order data
+                final orderData = {
+                  'name': '${firstName ?? ''} ${lastName ?? ''}'.trim(),
+                  'email': email ?? ''.trim(),
+                  'phoneNumber': phoneNumber ?? '',
+                  'latitude': latitude.toString(),
+                  'longitude': longitude.toString(),
+                  'address': address.trim(),
                   'items': cartProvider.items.map((cartItem) {
                     return {
-                      'name': cartItem.medicineItem.productName,
+                      'itemName': cartItem.medicineItem.productName,
                       'quantity': cartItem.quantity,
-                      'totalPrice':
-                          cartItem.medicineItem.price * cartItem.quantity,
+                      'totalPrice': cartItem.totalPrice,
                     };
                   }).toList(),
-                  'createdAt': Timestamp.now(),
-                });
+                };
+
+                print('Order Data: $orderData');
+
+                final orderJson = jsonEncode(orderData);
+
+                final response = await http.post(
+                  Uri.parse(API.orders),
+                  body: orderJson,
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                );
+
+                if (response.statusCode == 200) {
+                  // Order submitted successfully
+                  print('Order submitted successfully.');
+                  Fluttertoast.showToast(
+                    msg: 'Order submitted successfully',
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.green,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                } else {
+                  // Check if response indicates missing required fields
+                  if (response.statusCode == 400) {
+                    final responseData = jsonDecode(response.body);
+                    final errorMessage = responseData['message'];
+
+                    // Show a SnackBar with the error message
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(errorMessage),
+                      duration: Duration(seconds: 1),
+                    ));
+                  } else {
+                    // Error submitting the order
+                    print('Error submitting the order: ${response.body}');
+                  }
+                }
               } catch (e) {
                 print(e.toString());
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(

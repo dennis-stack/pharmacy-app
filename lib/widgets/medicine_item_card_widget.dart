@@ -46,7 +46,7 @@ class MedicineItemCardWidget extends StatelessWidget {
                       item.productName +
                       "-" +
                       (heroSuffix ?? ""),
-                  child: imageWidget(),
+                  child: imageWidget(item),
                 ),
               ),
             ),
@@ -70,7 +70,7 @@ class MedicineItemCardWidget extends StatelessWidget {
             Row(
               children: [
                 AppText(
-                  text: "\Kshs${item.price.toStringAsFixed(2)}",
+                  text: "\KShs ${item.price.toStringAsFixed(2)}",
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -84,7 +84,7 @@ class MedicineItemCardWidget extends StatelessWidget {
     );
   }
 
-  Widget imageWidget() {
+  Widget imageWidget(MedicineItem item) {
     return Container(
       width: 50,
       height: 50,

@@ -5,7 +5,6 @@ import 'package:pharmacyApp/models/medicine_item.dart';
 import 'favourite_toggle_icon_widget.dart';
 import 'package:pharmacyApp/providers/cart_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final MedicineItem medicineItem;
@@ -51,7 +50,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     Row(
                       children: [
                         Text(
-                          "\Kshs${getTotalPrice().toStringAsFixed(2)}",
+                          "\KShs ${getTotalPrice().toStringAsFixed(2)}",
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -83,6 +82,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             content: Text("Item added to cart successfully!"),
                             duration: Duration(seconds: 1),
                           ));
+                          print("Items in Cart: ${cartProvider.items}");
                         }
                       },
                     ),
@@ -109,27 +109,25 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           bottomRight: Radius.circular(25),
         ),
         gradient: new LinearGradient(
-            colors: [
-              const Color(0xFF3366FF).withOpacity(0.1),
-              const Color(0xFF3366FF).withOpacity(0.09),
-            ],
-            begin: const FractionalOffset(0.0, 0.0),
-            end: const FractionalOffset(0.0, 1.0),
-            stops: [0.0, 1.0],
-            tileMode: TileMode.clamp),
+          colors: [
+            const Color(0xFF3366FF).withOpacity(0.1),
+            const Color(0xFF3366FF).withOpacity(0.09),
+          ],
+          begin: const FractionalOffset(0.0, 0.0),
+          end: const FractionalOffset(0.0, 1.0),
+          stops: [0.0, 1.0],
+          tileMode: TileMode.clamp,
+        ),
       ),
       child: Hero(
         tag: "MedicineItem:" +
             widget.medicineItem.productName +
             "-" +
             (widget.heroSuffix ?? ""),
-        child: CachedNetworkImage(
-          imageUrl: widget.medicineItem.productImage,
-          placeholder: (context, url) => Center(
-            child: CircularProgressIndicator(),
-          ),
-          errorWidget: (context, url, error) => Icon(Icons.error),
+        child: Image.network(
+          widget.medicineItem.productImage,
           fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Icon(Icons.error),
         ),
       ),
     );

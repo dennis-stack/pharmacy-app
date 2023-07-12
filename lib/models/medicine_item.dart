@@ -1,83 +1,49 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:pharmacyApp/connection/connection.dart';
 
 class MedicineItem {
   final String id;
   final String productName;
-  final String productImage;
   final String productType;
-  late final double quantity;
+  final int quantity;
   final double price;
   final String description;
+  final String productImage;
 
   MedicineItem({
     required this.id,
     required this.productName,
-    required this.productImage,
     required this.productType,
     required this.quantity,
     required this.price,
     required this.description,
+    required this.productImage,
   });
 
-  factory MedicineItem.fromJson(Map<String, dynamic> data) {
+  factory MedicineItem.fromJson(Map<String, dynamic> json) {
     return MedicineItem(
-      id: data['id'].toString(),
-      productName: data['productName'],
-      productImage: data['productImage'],
-      productType: data['productType'],
-      quantity: data['Quantity'].toDouble(),
-      price: data['Price'].toDouble(),
-      description: data['Description'],
-    );
-  }
-
-  toJson() {
-    return MedicineItem(
-      id: id,
-      productName: productName,
-      price: price,
-      quantity: quantity,
-      description: description,
-      productImage: productImage,
-      productType: productType,
+      id: json['id'],
+      productName: json['productName'],
+      productType: json['productType'],
+      quantity: int.parse(json['quantity']),
+      price: double.parse(json['price']),
+      description: json['description'],
+      productImage: json['productImage'],
     );
   }
 
   static Future<List<MedicineItem>> getMedicineItems() async {
-    QuerySnapshot snapshot =
-        await FirebaseFirestore.instance.collection('medicineProducts').get();
-    return snapshot.docs
-        .map((doc) => MedicineItem.fromJson(doc.data() as Map<String, dynamic>))
-        .toList();
-  }
+    final response = await http.get(Uri.parse(API.products));
 
-  static MedicineItem? fromMap(Map<String, dynamic>? data) {
-    if (data == null) return null;
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body) as List<dynamic>;
 
-    final id = data['id'] as String?;
-    final name = data['productName'] as String?;
-    final price = data['Price'] as double;
-    final quantity = data['Quantity'] as double;
-    final description = data['Description'] as String?;
-    final imageUrl = data['productImage'] as String?;
-    final productType = data['productType'] as String?;
-
-    if (id == null ||
-        name == null ||
-        description == null ||
-        imageUrl == null ||
-        productType == null) {
-      return null;
+      return jsonData.map((data) {
+        return MedicineItem.fromJson(data);
+      }).toList();
+    } else {
+      throw Exception('Failed to fetch medicine items');
     }
-
-    return MedicineItem(
-      id: id,
-      productName: name,
-      price: price,
-      quantity: quantity,
-      description: description,
-      productImage: imageUrl,
-      productType: productType,
-    );
   }
 }

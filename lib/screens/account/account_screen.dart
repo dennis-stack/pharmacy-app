@@ -1,78 +1,81 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:pharmacyApp/common_widgets/app_text.dart';
-import 'package:pharmacyApp/screens/login_screen.dart';
 import 'package:pharmacyApp/styles/colors.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pharmacyApp/connection/connection.dart';
+import 'package:pharmacyApp/screens/login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'account_item.dart';
 
-class AccountScreen extends StatelessWidget {
+class AccountScreen extends StatefulWidget {
+  @override
+  _AccountScreenState createState() => _AccountScreenState();
+}
+
+class _AccountScreenState extends State<AccountScreen> {
+  String firstName = '';
+  String lastName = '';
+  String email = '';
+
+  @override
+  void initState() {
+    super.initState();
+    getUserDetailsFromSharedPrefs();
+  }
+
+  Future<void> getUserDetailsFromSharedPrefs() async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    setState(() {
+      firstName = preferences.getString('firstName') ?? '';
+      lastName = preferences.getString('lastName') ?? '';
+      email = preferences.getString('email') ?? '';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final email = user?.email ?? '';
-
     return SafeArea(
-      child: Container(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              SizedBox(
-                height: 20,
-              ),
-              FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(user?.uid)
-                    .get(),
-                builder: (BuildContext context,
-                    AsyncSnapshot<DocumentSnapshot> snapshot) {
-                  if (snapshot.hasError) {
-                    return Text("Something went wrong");
-                  }
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return CircularProgressIndicator();
-                  }
-                  final firstName = snapshot.data!['firstName'];
-                  final lastName = snapshot.data!['lastName'];
-                  return ListTile(
-                    leading: SizedBox(
-                        width: 65, height: 65, child: getImageHeader()),
-                    title: AppText(
-                      text: "$firstName $lastName",
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    subtitle: AppText(
-                      text: email,
-                      color: Color(0xff7C7C7C),
-                      fontWeight: FontWeight.normal,
-                      fontSize: 16,
-                    ),
-                  );
-                },
-              ),
-              Column(
-                children: getChildrenWithSeperator(
-                  widgets: accountItems.map((e) {
-                    return getAccountItemWidget(e, context);
-                  }).toList(),
-                  seperator: Divider(
-                    thickness: 1,
+      child: RefreshIndicator(
+        onRefresh: getUserDetailsFromSharedPrefs,
+        child: Container(
+          child: SingleChildScrollView(
+            physics: AlwaysScrollableScrollPhysics(),
+            child: Column(
+              children: [
+                SizedBox(height: 20),
+                ListTile(
+                  leading: SizedBox(
+                    width: 65,
+                    height: 65,
+                    child: getImageHeader(),
+                  ),
+                  title: Text(
+                    '$firstName $lastName',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    '$email',
+                    style: TextStyle(fontSize: 16, color: Color(0xff7C7C7C)),
                   ),
                 ),
-              ),
-              SizedBox(
-                height: 20,
-              ),
-              logoutButton(context),
-              SizedBox(
-                height: 20,
-              )
-            ],
+                Column(
+                  children: getChildrenWithSeperator(
+                    widgets: accountItems.map((e) {
+                      return getAccountItemWidget(e, context);
+                    }).toList(),
+                    seperator: Divider(
+                      thickness: 1,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+                logoutButton(context),
+                SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -90,10 +93,8 @@ class AccountScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(18.0),
           ),
           elevation: 0,
-          backgroundColor: Color(0xffF2F3F2),
-          textStyle: TextStyle(
-            color: Colors.white,
-          ),
+          backgroundColor: AppColors.redColor,
+          textStyle: TextStyle(color: Colors.white),
           padding: EdgeInsets.symmetric(vertical: 24, horizontal: 25),
           minimumSize: const Size.fromHeight(50),
         ),
@@ -103,30 +104,67 @@ class AccountScreen extends StatelessWidget {
             SizedBox(
               width: 20,
               height: 20,
-              child: SvgPicture.asset(
-                "assets/icons/account_icons/logout_icon.svg",
-              ),
+              child: Icon(Icons.logout),
             ),
             Text(
               "Log Out",
               textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryColor),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            Container()
+            Container(),
           ],
         ),
         onPressed: () {
-          FirebaseAuth.instance.signOut();
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => LoginPage()),
-          );
+          showLogoutConfirmationDialog(context);
         },
       ),
     );
+  }
+
+  void showLogoutConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return CupertinoAlertDialog(
+          title: Text('Log Out'),
+          content: Text('Are you sure you want to log out?'),
+          actions: <Widget>[
+            CupertinoDialogAction(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            CupertinoDialogAction(
+              child: Text('Log Out'),
+              onPressed: () {
+                logout();
+                Navigator.of(context).pop();
+              },
+              isDestructiveAction: true,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void logout() {
+    final url = API.logout;
+
+    http.get(Uri.parse(url)).then((response) {
+      if (response.statusCode == 200) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => LoginPage(email: '')),
+          (route) => false,
+        );
+      } else {
+        print('Failed to logout. Status code: ${response.statusCode}');
+      }
+    }).catchError((error) {
+      print('Exception occurred: $error');
+    });
   }
 
   Widget getImageHeader() {
@@ -134,7 +172,7 @@ class AccountScreen extends StatelessWidget {
     return CircleAvatar(
       radius: 5.0,
       backgroundImage: AssetImage(imagePath),
-      backgroundColor: AppColors.primaryColor.withOpacity(0.7),
+      backgroundColor: Colors.blue.withOpacity(0.7),
     );
   }
 
@@ -175,8 +213,13 @@ class AccountScreen extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(width: 10),
-            SvgPicture.asset("assets/icons/account_icons/arrow_right_icon.svg"),
+            SizedBox(width: 5),
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: SvgPicture.asset(
+                  "assets/icons/account_icons/arrow_right_icon.svg"),
+            ),
           ],
         ),
       ),

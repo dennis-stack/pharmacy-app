@@ -11,7 +11,7 @@
         android:label="pharmacyApp"
         android:icon="@mipmap/ic_launcher">
         <meta-data android:name="com.google.android.geo.API_KEY"
-               android:value="AIzaSyD1vdbDNFe5Xx0fc5Ku0b-gro-F3-L03EA"/>
+               android:value="AIzaSyDCAydvGJSUFb8Jt57qcBT3sAcyZ95kuZU"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

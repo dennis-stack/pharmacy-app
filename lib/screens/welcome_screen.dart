@@ -10,48 +10,57 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Colors.blue,
-        body: Container(
-          padding: EdgeInsets.symmetric(horizontal: 30),
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage(imagePath),
-              fit: BoxFit.cover,
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage(imagePath),
+                fit: BoxFit.cover,
+              ),
             ),
           ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                Spacer(),
-                icon(),
-                SizedBox(
-                  height: 20,
-                ),
-                welcomeTextWidget(),
-                SizedBox(
-                  height: 10,
-                ),
-                sloganText(),
-                SizedBox(
-                  height: 40,
-                ),
-                getButton(context),
-                SizedBox(
-                  height: 40,
-                )
-              ],
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [
+                  Colors.black.withOpacity(0.6),
+                  Colors.transparent,
+                ],
+              ),
             ),
           ),
-        ));
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 30),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Spacer(),
+                  icon(),
+                  welcomeTextWidget(),
+                  SizedBox(height: 10),
+                  sloganText(),
+                  SizedBox(height: 40),
+                  getButton(context),
+                  SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget icon() {
-    String iconPath = "assets/icons/shop.svg";
+    String iconPath = "assets/icons/shop_icon.svg";
     return SvgPicture.asset(
       iconPath,
-      width: 48,
-      height: 56,
+      width: 32,
+      height: 32,
     );
   }
 
@@ -62,13 +71,13 @@ class WelcomeScreen extends StatelessWidget {
           text: "Welcome",
           fontSize: 48,
           fontWeight: FontWeight.w600,
-          color: Colors.black,
+          color: Color.fromARGB(108, 252, 252, 252).withOpacity(0.9),
         ),
         AppText(
           text: "to our store",
           fontSize: 48,
           fontWeight: FontWeight.w600,
-          color: Colors.black,
+          color: Color.fromARGB(108, 252, 252, 252).withOpacity(0.7),
         ),
       ],
     );
@@ -79,7 +88,7 @@ class WelcomeScreen extends StatelessWidget {
       text: "Access healthcare at the palm of your hand",
       fontSize: 16,
       fontWeight: FontWeight.w600,
-      color: Color(0xffFCFCFC).withOpacity(0.7),
+      color: Color.fromARGB(255, 182, 90, 102).withOpacity(0.99),
     );
   }
 
@@ -97,7 +106,9 @@ class WelcomeScreen extends StatelessWidget {
   void onGetStartedClicked(BuildContext context) {
     Navigator.of(context).pushReplacement(new MaterialPageRoute(
       builder: (BuildContext context) {
-        return LoginPage();
+        return LoginPage(
+          email: '',
+        );
       },
     ));
   }

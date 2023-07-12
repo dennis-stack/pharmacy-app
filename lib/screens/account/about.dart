@@ -47,7 +47,7 @@ class AboutScreen extends StatelessWidget {
             ),
             SizedBox(height: 16),
             Text(
-              'Address: Egerton 536, Njoro',
+              'Address: 00100, Nairobi, Kenya',
               style: TextStyle(
                 fontSize: 16,
               ),
@@ -61,7 +61,7 @@ class AboutScreen extends StatelessWidget {
             ),
             SizedBox(height: 8),
             Text(
-              'Email: mathengedennis115@gmail.com',
+              'Email: support@pharmacyapp.com',
               style: TextStyle(
                 fontSize: 16,
               ),

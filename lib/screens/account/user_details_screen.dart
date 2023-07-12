@@ -1,8 +1,11 @@
+import 'dart:convert';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
-import 'package:pharmacyApp/common_widgets/app_button.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
+import 'package:pharmacyApp/common_widgets/app_button.dart';
+import 'package:pharmacyApp/connection/connection.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UserDetailsPage extends StatefulWidget {
   @override
@@ -22,13 +25,17 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
   @override
   void initState() {
     super.initState();
+    getUserDetails();
+  }
 
-    // Initialize form fields with current user data
-    final user = FirebaseAuth.instance.currentUser;
-    _firstNameController.text = user?.displayName?.split(' ')[0] ?? '';
-    _lastNameController.text = user?.displayName?.split(' ')[1] ?? '';
-    _phoneNoController.text = user?.phoneNumber ?? '';
-    _emailController.text = user?.email ?? '';
+  void getUserDetails() async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    setState(() {
+      _firstNameController.text = preferences.getString('firstName') ?? '';
+      _lastNameController.text = preferences.getString('lastName') ?? '';
+      _phoneNoController.text = preferences.getString('phoneNo') ?? '';
+      _emailController.text = preferences.getString('email') ?? '';
+    });
   }
 
   @override
@@ -121,93 +128,167 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                 ),
                 SizedBox(height: 10),
                 TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: _obscureConfirmPassword,
-                    decoration: InputDecoration(
-                      labelText: "Confirm New Password",
-                      border: OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureConfirmPassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: Colors.grey,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscureConfirmPassword = !_obscureConfirmPassword;
-                          });
-                        },
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmPassword,
+                  decoration: InputDecoration(
+                    labelText: "Confirm New Password",
+                    border: OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey,
                       ),
-                    )),
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
+                    ),
+                  ),
+                ),
                 SizedBox(height: 20),
                 AppButton(
                   label: 'Save Changes',
                   onPressed: () async {
-                    final user = FirebaseAuth.instance.currentUser;
                     final firstName = _firstNameController.text;
                     final lastName = _lastNameController.text;
                     final phoneNumber = _phoneNoController.text;
-                    final email = _emailController.text;
                     final password = _passwordController.text;
                     final confirmPassword = _confirmPasswordController.text;
 
-                    if (firstName.isEmpty ||
-                        lastName.isEmpty ||
-                        phoneNumber.isEmpty ||
-                        password.isEmpty ||
-                        confirmPassword.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Please fill all fields')),
+                    if (_firstNameController.text.isEmpty ||
+                        _lastNameController.text.isEmpty ||
+                        _phoneNoController.text.isEmpty) {
+                      Fluttertoast.showToast(
+                        msg: 'Please fill all fields',
+                        gravity: ToastGravity.BOTTOM,
+                        toastLength: Toast.LENGTH_SHORT,
+                        backgroundColor: Colors.red,
                       );
                       return;
                     }
 
                     if (password != confirmPassword) {
                       // Show error message if passwords don't match
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Passwords do not match')));
-                      return;
-                    }
-
-                    if (_passwordController.text.length < 8) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content:
-                            Text('Password must have at least 8 characters'),
-                      ));
+                      Fluttertoast.showToast(
+                        msg: 'Passwords do not match',
+                        gravity: ToastGravity.BOTTOM,
+                        toastLength: Toast.LENGTH_SHORT,
+                        backgroundColor: Colors.red,
+                      );
                       return;
                     }
 
                     final phoneRegex = RegExp(r'^07[0-9]{8}$');
                     if (!phoneRegex.hasMatch(_phoneNoController.text)) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(
-                            'Please enter a valid phone number starting with 07 and having 10 digits only'),
-                      ));
+                      Fluttertoast.showToast(
+                        msg:
+                            'Please enter a valid phone number starting with 07 and having 10 digits only',
+                        gravity: ToastGravity.BOTTOM,
+                        toastLength: Toast.LENGTH_LONG,
+                        backgroundColor: Colors.red,
+                      );
                       return;
                     }
 
-                    try {
-                      await user?.updateDisplayName('$firstName $lastName');
-                      if (password.isNotEmpty) {
-                        await user?.updatePassword(password);
-                      }
-                      await FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(user?.uid)
-                          .update({
+                    SharedPreferences preferences =
+                        await SharedPreferences.getInstance();
+                    final savedFirstName = preferences.getString('firstName');
+                    final savedLastName = preferences.getString('lastName');
+                    final savedPhoneNumber = preferences.getString('phoneNo');
+                    final currentPassword = preferences.getString('password');
+
+                    bool shouldUpdate =
+                        false; // Flag to track if an update is required
+
+                    if (firstName != savedFirstName ||
+                        lastName != savedLastName ||
+                        phoneNumber != savedPhoneNumber) {
+                      // At least one of the details has changed
+                      shouldUpdate = true;
+                    }
+
+                    if (password.isNotEmpty && password != currentPassword) {
+                      // Password has changed
+                      shouldUpdate = true;
+                    }
+
+                    if (!shouldUpdate) {
+                      Fluttertoast.showToast(
+                        msg: 'User details are still the same',
+                        gravity: ToastGravity.BOTTOM,
+                        toastLength: Toast.LENGTH_LONG,
+                        backgroundColor: Colors.blue,
+                      );
+                      return;
+                    }
+
+                    final url = API.update;
+                    final response = await http.post(
+                      Uri.parse(url),
+                      headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                      },
+                      body: {
                         'firstName': firstName,
                         'lastName': lastName,
                         'phoneNo': phoneNumber,
-                        'email': email,
-                      });
-                      // Show success message
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('User details updated successfully')));
-                    } catch (error) {
+                        'email': _emailController.text,
+                        'password': password,
+                      },
+                    );
+
+                    if (response.statusCode == 200) {
+                      final data = json.decode(response.body);
+                      final success = data['success'];
+
+                      if (success) {
+                        preferences.setString('firstName', firstName);
+                        preferences.setString('lastName', lastName);
+                        preferences.setString('phoneNo', phoneNumber);
+
+                        // Only update the password if it is not empty
+                        if (password.isNotEmpty) {
+                          if (password.length < 8) {
+                            Fluttertoast.showToast(
+                              msg: 'Password must have at least 8 characters',
+                              gravity: ToastGravity.BOTTOM,
+                              toastLength: Toast.LENGTH_SHORT,
+                              backgroundColor: Colors.red,
+                            );
+                            return;
+                          } else {
+                            preferences.setString('password', password);
+                          }
+                        }
+
+                        // Show success message
+                        Fluttertoast.showToast(
+                          msg: 'User details updated successfully',
+                          gravity: ToastGravity.BOTTOM,
+                          toastLength: Toast.LENGTH_SHORT,
+                          backgroundColor: Colors.green,
+                        );
+                      } else {
+                        // Show error message from the backend
+                        final message = data['message'];
+                        Fluttertoast.showToast(
+                          msg: 'Failed to update user details: $message',
+                          gravity: ToastGravity.BOTTOM,
+                          toastLength: Toast.LENGTH_SHORT,
+                          backgroundColor: Colors.red,
+                        );
+                      }
+                    } else {
                       // Show error message
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(error.toString())));
+                      Fluttertoast.showToast(
+                        msg: 'Failed to update user details. Please try again.',
+                        gravity: ToastGravity.BOTTOM,
+                        toastLength: Toast.LENGTH_SHORT,
+                        backgroundColor: Colors.red,
+                      );
                     }
                   },
                 )

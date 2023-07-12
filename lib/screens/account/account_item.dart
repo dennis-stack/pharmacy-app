@@ -3,7 +3,6 @@ import 'package:pharmacyApp/screens/account/about.dart';
 import 'package:pharmacyApp/screens/account/help.dart';
 import 'package:pharmacyApp/screens/account/orders.dart';
 import 'package:pharmacyApp/screens/account/user_details_screen.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class AccountItem {
   final String label;

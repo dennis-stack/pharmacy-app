@@ -11,4 +11,5 @@ class AppColors {
 
   static const primaryColor = Color.fromARGB(255, 6, 57, 197);
   static const darkGrey = Color(0xff7C7C7C);
+  static const redColor = Color.fromARGB(255, 197, 6, 6);
 }
